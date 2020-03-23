@@ -1,3 +1,5 @@
+[TOC]
+
 ### 一、简介
 
 [中文文档](http://mybatis.org/mybatis-3/index.html)
@@ -853,7 +855,48 @@ User{id=2, name='麻新钰', pwd='123456'}
 
 成功打印。（千万不要把mapper里面的namespace，id，参数，和返回类型写错，一个字母错了，就不会运行通过。）
 
+#### 3.2增加操作
 
+UserMapper中
 
+```java
+//新增一个用户
+int addUser(User user);
+```
 
+UserMapper.xml中
 
+```xml
+<!--实现新增用户addUser方法，这里返回值是一个int，因为我们也不需要这个返回值所以返回类型可以不写-->
+<insert id="addUser" parameterType="com.haonan.pojo.User">
+    insert into mybatis.user (id , name , pwd) values (#{id},#{name},#{pwd});
+</insert>
+```
+
+虽然UserMapper的addUser方法中参数是User对象，但是可以在xml中传user信息参数
+
+test中：
+
+```java
+@Test
+public void addUser(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+        UserMapper mapper=sqlSession.getMapper(UserMapper.class);
+        User user=new User(4,"第四个人","mima");
+        mapper.addUser(user);
+        System.out.println("新增用户为："+user.toString());
+    }finally {
+        sqlSession.close();
+    }
+}
+```
+
+**执行完上述代码后数据库中并没有提交新的第四条用户数据。**
+
+为啥？
+
+**因为增删改查操作需要提交事务**
+弹幕说有的人成功了，是因为当与数据库引擎说好自动commit时，就不用提交事务了。
+
+**提交事务：**
