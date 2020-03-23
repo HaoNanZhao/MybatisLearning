@@ -900,3 +900,34 @@ public void addUser(){
 弹幕说有的人成功了，是因为当与数据库引擎说好自动commit时，就不用提交事务了。
 
 **提交事务：**
+
+```java
+finally {
+    sqlSession.commit();
+    sqlSession.close();
+}
+```
+
+#### 3.3提交到数据库，出现乱码问题
+
+4	????	mima
+
+字符编码尽量要全部统一：
+
+> ①IDE，项目编码设置为UTF-8，很多时候IDE默认为UTF－８
+> ②数据库建表时设置为UTF-8，后期也可以改，比如通过SQLyog可视化界面
+> ③JDBC连接时也要用UTF-8
+> ④建表格时
+>
+> ```sql
+> CREATE TABLE `user`(
+> `id` INT(20) NOT NULL PRIMARY KEY,
+> `name` VARCHAR(30) DEFAULT NULL,
+> `pwd` VARCHAR(30) DEFAULT NULL
+> )ENGINE=INNODB DEFAULT CHARSET=utf8;
+> ```
+>
+> ⑤用use database_name;  show variables like "%chara%";查看你要用的database_name这个库的详细的字符集.
+>
+> ![image-20200323133750730](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323133750730.png)
+
