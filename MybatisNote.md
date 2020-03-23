@@ -32,6 +32,8 @@ ORM框架：Object Relational Mapping 对象关系映射  用于实现面向编�
 > MyBatis 本是[apache](https://baike.baidu.com/item/apache/6265)的一个**开源**项目[iBatis](https://baike.baidu.com/item/iBatis), 2010年这个项目由apache software foundation 迁移到了google code，并且改名为MyBatis 。2013年11月迁移到Github。
 >
 > **MyBatis 免除了几乎所有的 JDBC 代码以及设置参数和获取结果集的工作。**
+>
+> [中文文档](https://mybatis.org/mybatis-3/zh/getting-started.html)
 
 MyBatis是一个Maven项目。
 
@@ -814,7 +816,8 @@ public class UserMapperTest {
 
 - id: 就是对应namespace中的方法名字
 - resultType：Sql语句执行的返回值
-- parameter：参数类型
+- parameter：参数类型，有的时候不用写参数类型也行，但这个传入参数是自己定义的类那就要写了。
+- 在这里sql语句后面加不加分号都行
 
 现在我们去UserMapper接口中去新加一个方法。
 
@@ -930,4 +933,352 @@ finally {
 > ⑤用use database_name;  show variables like "%chara%";查看你要用的database_name这个库的详细的字符集.
 >
 > ![image-20200323133750730](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323133750730.png)
+>
+> character_set_client为客户端编码方式；
+> character_set_connection为建立连接使用的编码方式；
+> character_set_database为数据库的编码方式；
+> character_set_results是结果集的编码方式；
+> character_set_server为数据库服务器的编码方式。
+> [原文连接](https://blog.csdn.net/lsr40/article/details/78736855)
+> 设置:
+> ![image-20200323134502667](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323134502667.png)
+> 用set character_set_server=utf8;这种方式逐一设置一下,那个filesystem不要动,可能时因为file文件都是靠字节输入输出的
+>
+> ![image-20200323134752332](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323134752332.png)
+> 还不好使的话(因为设置了以后很有可能失效)就去去修改配置文件my.ini [连接](https://q.cnblogs.com/q/103634/)
+>
+> ![image-20200323140023961](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323140023961.png)
+> 先在俩个位置添加代码试试.重启一些服务,还是不好.先拉到把.
+>
+> ![image-20200323154105347](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323154105347.png)
+>
+> 好了  问题还是在IDEA  没有设置UTF-8
+> ![image-20200323154154234](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323154154234.png)
+> 具体的看笔记吧.  [印象识堂](https://www.yinxiang.com/everhub/note/08e8fae2-76a6-47cd-870e-47729c3f4d10)
 
+#### 3.4更新和删除
+
+```java
+	//更新用户
+    int updateUser(User user);
+
+    //根据Id删除用户
+    int deleteUserById(int id);
+```
+
+UserMapper.java中定义
+
+```xml
+<!--实现更新操作-->
+<update id="updateUser" parameterType="com.haonan.pojo.User">
+    update mybatis.user set name=#{name},pwd=#{pwd} where id=#{id}
+</update>
+
+<!--实现删除操作-->
+<delete id="deleteUserById" parameterType="int" >
+    delete from mybatis.user where id=#{id}
+</delete>
+```
+
+UserMapper.xml中实现
+
+```java
+@Test
+public void updateUser(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+        UserMapper mapper=sqlSession.getMapper(UserMapper.class);
+        mapper.updateUser(new User(4,"新名字","pssssqwe"));
+    } finally {
+        sqlSession.commit();
+        sqlSession.close();
+    }
+}
+@Test
+public void deleteUser(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+
+        UserMapper mapper=sqlSession.getMapper(UserMapper.class);
+        for (int i=5;i<=36;i++){
+            mapper.deleteUserById(i);
+        }
+
+    } finally {
+        sqlSession.commit();
+        sqlSession.close();
+    }
+}
+```
+
+UserMapperTest.java中实现
+
+![image-20200323171922972](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323171922972.png)
+成功。
+
+#### 3.5常见错误
+
+- 标签不要写错
+
+- resource用路径的方式绑定mapper时，用com/haonan/...这种格式，不要用com.haonan....
+
+- 程序配置文件必须符合规范
+
+  
+
+#### 3.6万能Mapper
+
+假设我们的实体类，或者数据库中的表，字段或者参数过多，我们应当考虑使用Map！
+
+```java
+User addUser2(Map<String,Object>map);
+```
+
+```xml
+<insert id="addUser2" parameterType="map">
+        insert into mybatis.user(id,name,pwd)values (#{userid},#{username},#{userpwd})
+ </insert>
+```
+
+
+
+```java
+public void addUser2(){
+        SqlSession sqlSession=MybatisUtils.getSqlSession();
+        try{
+            UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+            Map<String,Object> map=new HashMap<String, Object>();
+            map.put("userid",5);
+            map.put("userd","asdasd");
+            mapper.addUser2(map);
+        }finally {
+            sqlSession.commit();
+            sqlSession.close();
+        }
+    }
+```
+
+我在这里故意把第二句中的userpwd写错（xml中的密码引用字段是#{userpwd}）
+
+```java
+ map.put("userid",5);
+ map.put("userd","asdasd");
+```
+
+这会产生什么结果呢？
+
+![image-20200323182040362](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323182040362.png)
+插入了一个id为5的user，但密码是空，所以这里就很清晰了，因为我们要的关键字在xml中定死了，只能是userid、username、userpwd。所以我们明白这是一个什么样的插入过程了，之前我们用实体类作为addUser()的传入参数时，必须要把所有的信息都填上这也才能实例化出一个user，并且在xml的插入标签中#{}的字段必须对应User中的定义。
+
+现在有了map，通过put把我们需要的信息添加就行，而不是全部添加进去。因为在map中遍历时只会想要的关键字——key对应的value。你随便填什么map.put("asdasda","asd");没用，对不上关键字。
+
+当我改成
+
+```java
+map.put("userid",6);
+map.put("userpwd","asd");
+map.put("username","第六人");
+mapper.addUser2(map);
+```
+
+时就好了，说明一点同样的不能重复插入数据库空已有的id号，也不能将这个id弄成空值。
+
+再写一个吧。
+
+```java
+//万能Mapper返回User
+User getUserById2(Map<String,Object> map);
+```
+
+```xml
+<select id="getUserById2" parameterType="map" resultType="com.haonan.pojo.User">
+    select * from mybatis.user where id=#{userid} and name=#{username}
+</select>
+```
+
+这里传入是map，返回User对象。
+
+```java
+@Test
+public void getUserById2(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        Map<String , Object> map=new HashMap<String, Object>();
+        map.put("userid",2);
+        map.put("username","麻新钰");
+        User user = mapper.getUserById2(map);
+        System.out.println(user.toString());
+    }finally {
+        //sqlSession.commit();
+        sqlSession.close();
+    }
+}
+```
+
+当然我xml里面是 id and name一起做交运算，id本来就是key，当然是没必要这么写的，只是为了突出可以用俩个参数填进map中返回一个User。是不是可以用or来实现返回一个UserList呢？？？
+
+试一下：
+
+```java
+//现在我想多选几个User
+List<User> getUserByIdOrName(Map<String,Object>map);
+```
+
+```xml
+<!--实现用id‘或者name选user-->
+<select id="getUserByIdOrName" parameterType="map" resultType="com.haonan.pojo.User">
+    select * from mybatis.user where id=#{userid} or  name=#{username}
+</select>
+```
+
+```java
+@Test
+public void getUserByIdOrName(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        Map<String , Object> map=new HashMap<String, Object>();
+        map.put("userid",1);
+        map.put("username","麻新钰");
+        List<User> userlist = mapper.getUserByIdOrName(map);
+        for (User user : userlist) {
+            System.out.println(user.toString());
+        }
+    }finally {
+        //sqlSession.commit();
+        sqlSession.close();
+    }
+}
+```
+
+```java
+User{id=1, name='赵浩男', pwd='123456'}
+User{id=2, name='麻新钰', pwd='123456'}
+```
+
+还真行！！！漂亮！
+
+#### 3.7进行模糊查询
+
+1.Java代码执行的时候，传递通配符% %
+
+```java
+//模糊查询
+List<User> getUserLike(String s);
+```
+
+```xml
+<!--支持模糊查询-->
+<select id="getUserLike" resultType="com.haonan.pojo">
+    select * from mybatis.user where name like #{mohuName}
+</select>
+```
+
+```java
+@Test
+public void getUserLike(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    try {
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        List<User> userlist = mapper.getUserLike("%爱%");
+        for (User user : userlist) {
+            System.out.println(user.toString());
+        }
+    }finally {
+        //sqlSession.commit();
+        sqlSession.close();
+    }
+}
+```
+
+**注意！**这是一种比较不安全的方式，很少这么写。一般是通过改xml
+
+2.在sql拼接中使用通配符！有点像防止sql注入的感觉，让用户传一个稳定的值。
+
+```xml
+<select id="getUserLike" resultType="com.haonan.pojo">
+    select * from mybatis.user where name like "%"#{mohuName}"%"
+</select>
+```
+
+```java
+List<User> userlist = mapper.getUserLike("爱");
+```
+
+![image-20200323214439621](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323214439621.png)
+都是可以输出正确结果，拼接的时候在xml中就已经拼接死了。
+
+### 四、配置解析
+
+#### 前文
+
+> 经过前面几个章节的学习差不多已经对整个Mybatis有大概的了解了。
+> 加上2.5中那个整个过程的梳理解释的就挺好的了。
+
+回到文档，已经完成入门阶段的学习了，其实在配置中（本例配置文件为mybatis-config.xml）我们只用到了environment和mappers。
+
+```xml
+<configuration>
+    <!--环境-->
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/mybatis?
+                serverTimeZone=Asia/Shanghai&amp;
+                useSSL=true&amp;
+                useUnicode=true&amp;
+                characterEncoding=UTF-8"/>
+                <property name="username" value="root"/>
+                <property name="password" value="Zhaohaonan1234!"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <mapper resource="com/haonan/dao/UserMapper.xml"/>
+    </mappers>
+</configuration>
+```
+
+[中文文档](https://mybatis.org/mybatis-3/zh/configuration.html)
+
+![image-20200323221824823](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200323221824823.png)
+
+学习的进程就如上图所示。
+
+#### 4.1利用mybatis01搭建mybatis02
+
+为了方便后面的学习新建第二个moudle——mybatis02,然后把01中的主要代码考过来，删改了一些没用的东西后，就试试能不能跑起来，结果说找不到Mapper.xml文件了。
+
+**还有可能出现的其他错误——资源过滤问题——找不到UserMapper.xml（虽然我没有遇见）**
+
+这句话出自2.5几个错误分析，之前的01中没有遇到，这里就遇到了，不过幸好在pom.xml中加上build标签后，能跑起来了，真是太奇妙了................原因看前文2.5
+
+```xml
+	<build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <!--让Java路径下可以包含下面这俩个文件-->
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+```
+
+4.2
