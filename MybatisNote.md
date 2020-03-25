@@ -300,7 +300,7 @@ String resource = "org/mybatis/example/mybatis-config.xml";
 - 或者：在默认的安装路径下`C:----MySQLServer下`找到`my.ini`文件。修改在`[mysqld]`下方添加：**default-time-zone='+08:00'**。`（注意引号）`
 - 我根据提示信息，在advance下找到了这个servertime原来是空着的，不过加上了UTC(网上一个教程的灵感，这是世界统一时间)
 
-![image-20200319005440397](image-20200319005440397.png)**终于成功了！！！！！！！！！！！！！！！！！！！！！！**
+![image-20200319005440397](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200319005440397.png)**终于成功了！！！！！！！！！！！！！！！！！！！！！！**
 
 ##### 2.2.4从SQLSessionFactory中获取SqlSession
 
@@ -341,7 +341,7 @@ SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(input
 
 1. 建包 java中建立com.haonan.dao com.haonan.utils 在其中utils时工具包
 2. 再utils下建工具类MybatisUtils
-   ![image-20200319192804805](image-20200319192804805.png)
+   ![image-20200319192804805](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200319192804805.png)
 
 其中写入代码如下（这时候就要用到上面的三行代码了）：最后生成一个sqlSessionFactory对象。
 
@@ -766,7 +766,7 @@ public class UserMapperTest {
 
 三个接口的分析
 
-![image-20200320111550324](image-20200320111550324.png)
+![image-20200320111550324](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200320111550324.png)
 
 所以修改test代码
 
@@ -1036,7 +1036,7 @@ User addUser2(Map<String,Object>map);
 
 ```xml
 <insert id="addUser2" parameterType="map">
-        insert into mybatis.user(id,name,pwd)values (#{userid},#{username},#{userpwd})
+       insert into mybatis.user(id,name,pwd)values (#{userid},#{username},#{userpwd})
  </insert>
 ```
 
@@ -1081,7 +1081,7 @@ map.put("username","第六人");
 mapper.addUser2(map);
 ```
 
-时就好了，说明一点同样的不能重复插入数据库空已有的id号，也不能将这个id弄成空值。
+时就好了，说明一下：同样，咱也不能重复插入数据库空已有的id号，也不能将这个id弄成空值。
 
 再写一个吧。
 
@@ -1281,4 +1281,1002 @@ List<User> userlist = mapper.getUserLike("爱");
     </build>
 ```
 
-4.2
+#### 4.2environments具体讲解
+
+```XML
+<environments default="development">
+  <environment id="development">
+    <transactionManager type="JDBC">
+      <property name="..." value="..."/>
+    </transactionManager>
+    <dataSource type="POOLED">
+      <property name="driver" value="${driver}"/>
+      <property name="url" value="${url}"/>
+      <property name="username" value="${username}"/>
+      <property name="password" value="${password}"/>
+    </dataSource>
+  </environment>
+</environments>
+```
+
+MyBatis 可以配置成适应多种环境，这种机制有助于将 SQL 映射应用于多种数据库之中， 现实情况下有多种理由需要这么做。例如，开发、测试和生产环境需要有不同的配置；或者想在具有相同 Schema 的多个生产数据库中使用相同的 SQL 映射。还有许多类似的使用场景。
+
+##### 1.多个环境及其选择
+
+**不过要记住：尽管可以配置多个环境，但每个 SqlSessionFactory 实例只能选择一种环境。**
+
+所以，如果你想连接两个数据库，就需要创建两个 SqlSessionFactory 实例，每个数据库对应一个。而如果是三个数据库，就需要三个实例，依此类推，记起来很简单：
+
+- **每个数据库对应一个 SqlSessionFactory 实例**
+
+为了指定创建哪种环境，只要将它作为可选的参数传递给 SqlSessionFactoryBuilder 即可。可以接受环境配置的两个方法签名是：
+
+```xml
+SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(reader, environment);
+SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(reader, environment, properties);
+```
+
+如果忽略了环境参数，那么将会加载默认环境，如下所示：
+
+```xml
+SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(reader);
+SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(reader, properties);
+```
+
+这个environment就是环境配置中的id号，如果要用默认的environment就要在最开始的地方定义一个default。
+
+- 默认使用的环境 ID（比如：default="development"）。
+- 每个 environment 元素定义的环境 ID（比如：id="development"）。
+- 事务管理器的配置（比如：type="JDBC"）。
+- 数据源的配置（比如：type="POOLED"）。
+
+##### 2.事务管理器（transactionManager）
+
+在 MyBatis 中有两种类型的事务管理器（也就是 type="[JDBC|MANAGED]"）：
+
+- JDBC – 这个配置直接**使用了 JDBC 的提交和回滚设施**，它依赖从数据源获得的连接来管理事务作用域。
+
+- MANAGED – 这个配置几乎没做什么。它从不提交或回滚一个连接，而是让容器来管理事务的整个生命周期（比如 JEE 应用服务器的上下文）。 默认情况下它会关闭连接。然而一些容器并不希望连接被关闭，因此需要将 closeConnection 属性设置为 false 来阻止默认的关闭行为。例如:
+
+  ```
+  <transactionManager type="MANAGED">
+    <property name="closeConnection" value="false"/>
+  </transactionManager>
+  ```
+
+**提示** 如果你正在使用 Spring + MyBatis，则没有必要配置事务管理器，因为 Spring 模块会使用自带的管理器来覆盖前面的配置。
+
+这两种事务管理器类型都不需要设置任何属性。它们其实是类型别名，换句话说，你可以用 TransactionFactory 接口实现类的全限定名或类型别名代替它们。
+
+##### 3.数据源
+
+用于连接数据库
+比如有dbcp c3p0  druid 
+
+dataSource 元素使用标准的 JDBC 数据源接口来配置 JDBC 连接对象的资源。
+
+- 大多数 MyBatis 应用程序会按示例中的例子来配置数据源。虽然数据源配置是可选的，但如果要启用延迟加载特性，就必须配置数据源。
+
+有三种内建的数据源类型（也就是 type="[**UNPOOLED|POOLED|JNDI**]"）：
+
+**UNPOOLED**– 这个数据源的实现会每次请求时打开和关闭连接。虽然有点慢，但对那些数据库连接可用性要求不高的简单应用程序来说，是一个很好的选择。 性能表现则依赖于使用的数据库，对某些数据库来说，使用连接池并不重要，这个配置就很适合这种情形。UNPOOLED 类型的数据源仅仅需要配置以下 5 种属性：
+
+- `driver` – 这是 JDBC 驱动的 Java 类全限定名（并不是 JDBC 驱动中可能包含的数据源类）。
+- `url` – 这是数据库的 JDBC URL 地址。
+- `username` – 登录数据库的用户名。
+- `password` – 登录数据库的密码。
+- `defaultTransactionIsolationLevel` – 默认的连接事务隔离级别。
+- `defaultNetworkTimeout` – 等待数据库操作完成的默认网络超时时间（单位：毫秒）。查看 `java.sql.Connection#setNetworkTimeout()` 的 API 文档以获取更多信息。
+
+作为可选项，你也可以传递属性给数据库驱动。只需在属性名加上“driver.”前缀即可，例如：
+
+- `driver.encoding=UTF8`
+
+这将通过 DriverManager.getConnection(url, driverProperties) 方法传递值为 `UTF8` 的 `encoding` 属性给数据库驱动。
+
+**POOLED**– 这种数据源的实现利用“池”的概念将 JDBC 连接对象组织起来，避免了创建新的连接实例时所必需的初始化和认证时间。 **这种处理方式很流行，能使并发 Web 应用快速响应请求。**
+
+除了上述提到 UNPOOLED 下的属性外，还有更多属性用来配置 POOLED 的数据源：
+
+- `poolMaximumActiveConnections` – 在任意时间可存在的活动（正在使用）连接数量，默认值：10
+- `poolMaximumIdleConnections` – 任意时间可能存在的空闲连接数。
+- `poolMaximumCheckoutTime` – 在被强制返回之前，池中连接被检出（checked out）时间，默认值：20000 毫秒（即 20 秒）
+- `poolTimeToWait` – 这是一个底层设置，如果获取连接花费了相当长的时间，连接池会打印状态日志并重新尝试获取一个连接（避免在误配置的情况下一直失败且不打印日志），默认值：20000 毫秒（即 20 秒）。
+- `poolMaximumLocalBadConnectionTolerance` – 这是一个关于坏连接容忍度的底层设置， 作用于每一个尝试从缓存池获取连接的线程。 如果这个线程获取到的是一个坏的连接，那么这个数据源允许这个线程尝试重新获取一个新的连接，但是这个重新尝试的次数不应该超过 `poolMaximumIdleConnections` 与 `poolMaximumLocalBadConnectionTolerance` 之和。 默认值：3（新增于 3.4.5）
+- `poolPingQuery` – 发送到数据库的侦测查询，用来检验连接是否正常工作并准备接受请求。默认是“NO PING QUERY SET”，这会导致多数数据库驱动出错时返回恰当的错误消息。
+- `poolPingEnabled` – 是否启用侦测查询。若开启，需要设置 `poolPingQuery` 属性为一个可执行的 SQL 语句（最好是一个速度非常快的 SQL 语句），默认值：false。
+- `poolPingConnectionsNotUsedFor` – 配置 poolPingQuery 的频率。可以被设置为和数据库连接超时时间一样，来避免不必要的侦测，默认值：0（即所有连接每一时刻都被侦测 — 当然仅当 poolPingEnabled 为 true 时适用）。
+
+**JNDI** – 这个数据源实现是为了能在如 EJB 或应用服务器这类容器中使用，容器可以集中或在外部配置数据源，然后放置一个 JNDI 上下文的数据源引用。这种数据源配置只需要两个属性：
+
+- `initial_context` – 这个属性用来在 InitialContext 中寻找上下文（即，initialContext.lookup(initial_context)）。这是个可选属性，如果忽略，那么将会直接从 InitialContext 中寻找 data_source 属性。
+- `data_source` – 这是引用数据源实例位置的上下文路径。提供了 initial_context 配置时会在其返回的上下文中进行查找，没有提供时则直接在 InitialContext 中查找。
+
+和其他数据源配置类似，可以通过添加前缀“env.”直接把属性传递给 InitialContext。比如：
+
+- `env.encoding=UTF8`
+
+这就会在 InitialContext 实例化时往它的构造方法传递值为 `UTF8` 的 `encoding` 属性。
+
+你可以通过实现接口 `org.apache.ibatis.datasource.DataSourceFactory` 来使用第三方数据源实现：
+
+```JAVA
+public interface DataSourceFactory {
+  void setProperties(Properties props);
+  DataSource getDataSource();
+}
+```
+
+`org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory` 可被用作父类来构建新的数据源适配器，比如下面这段插入 C3P0 数据源所必需的代码：
+
+```JAVA
+import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+
+public class C3P0DataSourceFactory extends UnpooledDataSourceFactory {
+  public C3P0DataSourceFactory() {
+    this.dataSource = new ComboPooledDataSource();
+  }
+}
+```
+
+为了令其工作，记得在配置文件中为每个希望 MyBatis 调用的 setter 方法增加对应的属性。 下面是一个可以连接至 PostgreSQL 数据库的例子：
+
+```XML
+<dataSource type="org.myproject.C3P0DataSourceFactory">
+  <property name="driver" value="org.postgresql.Driver"/>
+  <property name="url" value="jdbc:postgresql:mydb"/>
+  <property name="username" value="postgres"/>
+  <property name="password" value="root"/>
+</dataSource>
+```
+
+#### 4.3属性properties
+
+我们可以通过properties属性来实现引用配置文件。
+
+这些属性可以在外部进行配置，并可以进行动态替换。你既可以在典型的 Java 属性文件中配置这些属性，也可以在 properties 元素的子元素中设置。
+
+常用的是dp.properties。
+
+在resource中新建dp.properties编写好这个配置文件。
+
+```properties
+driver=com.mysql.jdbc.Driver
+url=jdbc:mysql://localhost:3306/mybatis?serverTimeZone=Asia/Shanghai&useSSL=true&useUnicode=false&characterEncoding=UTF-8
+username=root
+password=Zhaohaonan1234!
+```
+
+这里有个问题就是，use SSL不设置为false会报错，不知道为啥，以后再解决吧——2020.3.24
+
+在核心配置文件中引入properties。官网的例子。
+
+```xml
+<properties resource="org/mybatis/example/config.properties">
+  <property name="username" value="dev_user"/>
+  <property name="password" value="F2Fa3!33TYyg"/>
+</properties>
+```
+
+再看我们实际在mybatis-config.xml中写的：
+
+```xml
+	<!--properties设置，引入外部配置文件dp.properties-->
+    <properties resource="db.properties"/>
+    <!--可以先不用标签对，里面的属性先不写，自闭合-->
+
+    <!--环境-->
+    <environments default="development">
+        <environment id="development">
+            <!--默认是使用JDBC的传输方式-->
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <!--数据库相关的信息-->
+                <property name="driver" value="${driver}"/><!--事务管理-->
+                <property name="url" value="${url}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password}"/>
+            </dataSource>
+        </environment>
+    </environments>	
+```
+
+这时我们就可以从propertie中直接读那些参数放进environment中了。
+
+我们在引用的时候并没有使用官网文档中的标签对的形式，是因为有些属性我们时properties中已经写了。如果dp.properties像只有下面这样：
+
+```properties
+driver=com.mysql.jdbc.Driver
+url=jdbc:mysql://localhost:3306/mybatis?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimeZone=Asia/Shanghai
+```
+
+就得：
+
+```xml
+<properties resource="db.properties">
+    <property name="username" value="root"/>
+    <property name="password" value="Zhaohaonan1234!"/>
+    <!--要是同时写了上面的参数在那个dp.property中 这个会被覆盖-->
+</properties>
+```
+
+考虑优先级，外部引入的优先。
+
+（注：在xml中所有标签都有一个顺序）
+
+![image-20200324110726207](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200324110726207.png)
+顺序不对会报错。
+
+#### 4.4类型别名（typeAliases）
+
+类型别名可为 Java 类型设置一个缩写名字。 它仅用于 XML 配置，意在降低冗余的全限定类名书写。例如：
+
+```xml
+<typeAliases>
+  <typeAlias alias="Author" type="domain.blog.Author"/>
+  <typeAlias alias="Blog" type="domain.blog.Blog"/>
+</typeAliases>
+```
+
+这是一种办法，还有另种办法。
+
+也可以指定一个包名，MyBatis 会在包名下面搜索需要的 Java Bean，比如：
+
+```xml
+<typeAliases>
+  <package name="domain.blog"/>
+</typeAliases>
+```
+
+个人觉得还是用限定名字比较好，知道那是个什么玩意比如com.haonan.pojo.User,知道在哪。
+
+下面就来改改：
+
+##### 1.第一种方法
+
+核心配置文件中，添加typeAliases
+
+```xml
+<!--可以给实体类起别名，Mapper.xml中就可以直接用别名了-->
+<typeAliases>
+    <typeAlias type="com.haonan.pojo.User" alias="User"/>
+</typeAliases>
+```
+
+```xml
+<select id="getUserList" resultType="User">
+    /*返回一个UserList 类型是User类*/
+    select * from mybatis.user
+</select>
+```
+
+##### 2.第二种方法
+
+指定一个包名，Mybatis会在包名下面搜索需要的javaBean，比如扫描实体类的包。每一个在包 `domain.blog` 中的 Java Bean，在没有注解的情况下，会使用 Bean 的首字母小写的非限定类名来作为它的别名。 比如 `domain.blog.Author` 的别名为 `author`；若有注解，则别名为其注解值。
+
+```xml
+<typeAliases>
+    <package name="com.haonan.pojo"/>
+</typeAliases>
+```
+
+```xml
+<select id="getUserList" resultType="user">
+    select * from mybatis.user
+</select>
+```
+
+成功！注：用大写其实也可以，只不过人家建议用小写。
+
+##### 3.第二种方法中加注解
+
+![image-20200325085330518](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325085330518.png)
+在User类中加入@Alias 是在org.apache.ibatis.type包下的。
+给User起个别名叫hello。
+
+```xml
+<select id="getUserList" resultType="hello"> 
+    select * from mybatis.user
+</select>
+```
+
+但是对于UserMapper中的别的方法我们并没有使用User的别名，
+
+```xml
+<select id="getUserById" parameterType="int" resultType="com.haonan.pojo.User">
+    select * from mybatis.user where id = #{id}
+</select>
+```
+
+全名还是能够正常使用的。但是如果不是全名，别的就会报错，这个不难理解。
+
+4.常见Java类型内建的类型别名
+
+下面是一些为常见的 Java 类型内建的类型别名。它们都是不区分大小写的，注意，为了应对原始类型的命名重复，采取了特殊的命名风格。
+
+| 别名       | 映射的类型 |
+| :--------- | :--------- |
+| _byte      | byte       |
+| _long      | long       |
+| _short     | short      |
+| _int       | int        |
+| _integer   | int        |
+| _double    | double     |
+| _float     | float      |
+| _boolean   | boolean    |
+| string     | String     |
+| byte       | Byte       |
+| long       | Long       |
+| short      | Short      |
+| int        | Integer    |
+| integer    | Integer    |
+| double     | Double     |
+| float      | Float      |
+| boolean    | Boolean    |
+| date       | Date       |
+| decimal    | BigDecimal |
+| bigdecimal | BigDecimal |
+| object     | Object     |
+| map        | Map        |
+| hashmap    | HashMap    |
+| list       | List       |
+| arraylist  | ArrayList  |
+| collection | Collection |
+| iterator   | Iterator   |
+
+例子：我把之前的int改成_int
+
+```xml
+<!-- 实现方法getUserById根据Id查询 -->
+<select id="getUserById" parameterType="_int" resultType="com.haonan.pojo.User">
+    select * from mybatis.user where id = #{id}
+</select>
+```
+
+没毛病，能跑。
+
+#### 4.5设置（settings）
+
+这是 MyBatis 中极为重要的调整设置，它们会改变 MyBatis 的运行时行为。 下表描述了设置中各项设置的含义、默认值等。
+
+[设置的表格在此](https://mybatis.org/mybatis-3/zh/configuration.html#typeAliases)
+
+太多了，挑几个学就行。
+
+①mapUnderscoreToCamelCase
+是否开启驼峰命名自动映射，即从经典数据库列名 A_COLUMN 映射到经典 Java 属性名 aColumn。早期Oracle中所有名字都会转换成大写比如userName-->USERNAME，影响阅读所以用_分割-->USER_NAME。所以有了在这里的驼峰转换。
+
+②loglmpl
+指定Mybatis所用日志的具体实现，未指定时将自动查找。
+SLF4J | LOG4J | LOG4J2 | JDK_LOGGING | COMMONS_LOGGING | STDOUT_LOGGING | NO_LOGGING
+打印日志用。在第六章种具体讲解。
+
+Spring中就不用这些设置了。
+
+#### 4.6其他设置
+
+1.plugins
+![image-20200325092117444](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325092117444.png)
+
+- mybatis-generator-core
+- mybatis-plus
+  这是在maven仓库中的俩个插件。
+
+
+#### 4.7映射器(mappers)
+
+> MapperRegistry:注册绑定我们的Mapper文件；
+
+前面已经讲过了如何在核心配置文件——mybatis-congig.xml中添加mapper。其实还有好几种方法。
+
+你可以使用相对于类路径的资源引用，或完全限定资源定位符（包括 `file:///` 形式的 URL），或类名和包名等。例如：
+
+```xml
+<!-- 使用相对于类路径的资源引用 -->
+<mappers>
+  <mapper resource="org/mybatis/builder/AuthorMapper.xml"/>
+  <mapper resource="org/mybatis/builder/BlogMapper.xml"/>
+  <mapper resource="org/mybatis/builder/PostMapper.xml"/>
+</mappers>
+——————————————————————————————————————————————————————————————————————
+<!-- 使用完全限定资源定位符（URL） -->
+<mappers>
+  <mapper url="file:///var/mappers/AuthorMapper.xml"/>
+  <mapper url="file:///var/mappers/BlogMapper.xml"/>
+  <mapper url="file:///var/mappers/PostMapper.xml"/>
+</mappers>
+——————————————————————————————————————————————————————————————————————
+<!-- 使用映射器接口实现类的完全限定类名 -->
+<mappers>
+  <mapper class="org.mybatis.builder.AuthorMapper"/>
+  <mapper class="org.mybatis.builder.BlogMapper"/>
+  <mapper class="org.mybatis.builder.PostMapper"/>
+</mappers>
+——————————————————————————————————————————————————————————————————————
+<!-- 将包内的映射器接口实现全部注册为映射器 -->
+<mappers>
+  <package name="org.mybatis.builder"/>
+</mappers>
+```
+
+第一种我们使用过了。
+第二种不要用。
+第三种用class实现。
+第四种就是将整个包里面的mapper接口全部注册为映射器，就像前面讲的typeAlias中的用包名一样，要找什么东西了就去这个指定的包里面找。
+
+第三种方式中使用class文件绑定注册会产生的一些问题：
+
+```xml
+<mappers>
+    <mapper class="com/haonan/dao/UserMapper"/>
+</mappers>
+```
+
+①接口和它的配置文件必须同名。
+②接口和它的配置文件必须在同一个包下。
+
+第四种，使用包
+```xml
+<mappers>
+	<package name="com.haonan.dao"/>
+</mappers>
+```
+
+这样也好使。但是扫描包注入还是要同名。
+
+还是推荐一，用一个加一个多好，还不用同名！
+
+#### 4.8作用域(scope)和生命周期
+
+生命周期和作用域是至关重要的，因为错误的使用会导致非常严重的**并发问题**。
+
+##### ![image-20200325114056386](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325114056386.png)为什么呢？先看整个流程图
+
+![image-20200325113730121](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325113730121.png)
+
+SqlSessionFactoryBuilder：
+
+- 一旦创建就没有用了
+- 作用域就是局部变量
+
+SqlSessionFactory:
+
+- 就是相当于数据库连接池，它用于创建SqlSession，没必要多次重建他，当然也不能丢弃。
+- 最简单的就是使用**单例模式**或者静态单例模式。还记得单例模式是什么么，不记得了就看看去 [单例模式](https://www.runoob.com/design-pattern/singleton-pattern.html)
+
+SqlSession:
+
+- 连接到数据库连接池的一个请求！
+- 关闭请求，避免资源浪费。关闭放在finally中
+- SqlSession 的实例不是线程安全的，因此是不能被共享的，所以它的最佳的作用域是请求或方法作用域。 我们我们创建他是在test中创建的。
+
+![image-20200325141739346](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325141739346.png)
+
+这里面的每一个Mapper都代表每一个业务。
+
+### 五、结果集映射
+
+>  解决属性名（实体类）和字段名（数据库）不一致问题。
+
+新建一个项目mybatis03拷贝之前的，对User实体类中的属性进行改变。
+
+![image-20200325144804402](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325144804402.png)
+
+![image-20200325144823556](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325144823556.png)
+
+```java
+User{id=2, name='麻新钰', password='null'}
+```
+
+#### 1.问题
+
+此时的输出password为null，why?
+要回到UserMapper.xml中找原因
+
+```xml
+<select id="getUserById" parameterType="_int" resultType="User">
+    select * from mybatis.user where id = #{id}
+</select>
+```
+
+select * from mybatis.user where id = #{id}
+这句话其实就是：select id,name,pwd form ……
+然后将这三个字段映射给User中的字段，可是现在User中没有pwd字段了，所以就返回了一个null，这也是一开始为什么要其一样名字的原因。
+
+#### 2.解决办法一：傻子式起别名
+
+> 此法简单，但是并不能一劳永逸，不太精明
+
+```xml
+<select id="getUserById" parameterType="_int" resultType="User">
+    select id , name , pwd as password from mybatis.user where id = #{id}
+</select>
+```
+
+这样子pwd as password就能成功返回给User然后正确输出了。
+
+#### 3.解决办法二——结果映射集
+
+> 让User中的属性和数据库中的字段（列属性）一一对应
+
+返回类型不是User实体类了，而是用resultMap（map）代替，并在UserMapper.xml中加上映射集
+[结果映射文档](https://mybatis.org/mybatis-3/zh/sqlmap-xml.html)
+
+```xml
+<resultMap id="UserMap" type="User">
+    <!--cloumn数据库中的字段，property中的属性-->
+    <result column="id" property="id"/>
+    <result column="name" property="name"/>
+    <result column="pwd" property="password"/>
+</resultMap>
+
+<!-- 实现方法getUserById根据Id查询 -->
+<select id="getUserById" parameterType="_int" resultMap="UserMap">
+    select * from mybatis.user where id=#{id}
+</select>
+```
+
+注意，要返回不再是resultType而是resultMap。
+
+当然由于id和name是一样的所以：
+
+```xml
+<!--<result column="id" property="id"/>
+<result column="name" property="name"/>-->
+<result column="pwd" property="password"/>
+这样也行！
+```
+
+个人觉得文档里说的就不错。可以看看人家咋说的。一张图就说明了如何使用
+
+![image-20200325153850018](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325153850018.png)
+
+如果世界总是这么简单就好了。其实还有很多操作！！！！！
+
+resultMap是很强大的，当数据库内容庞杂时就要用resultMap来实现了，这样才能写起来自己心里有数舒服便捷。
+
+看一种关系：![image-20200325154221045](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325154221045.png)
+
+为以后继续学习resultMap起个头。
+
+### 六、log日志
+
+> 新建mybatis04
+
+#### 6.1日志工厂
+
+如果一个数据库操作出现了异常，我们需要排错，看输出台很难看出问题，日志就是很好的助手。
+
+> 曾经sout、debug是有用的排错工具，现在用内置工厂。
+
+在4.5中我们提到过logImpl——指定Mybatis所用日志的具体实现，未指定时将自动查找。
+
+- SLF4J
+- LOG4J 【掌握】
+- LOG4J2
+- JDK_LOGGING
+- COMMONS_LOGGING
+- STDOUT_LOGGING 【掌握】
+- NO_LOGGING
+
+在Mybatis中具体是使用哪一个日志实现，在设置(settings)中设定！——mybatis-config.xml核心配置文件中
+
+##### 1.例如：STDOUT_LOGGING标准日志输出
+
+命名一定要规范，注意字母。这个是mybatis自带的。
+
+```XML
+<!--设置选项-->
+<settings>
+    <!--log日志设置 名字 属性-->
+    <setting name="logImpl" value="STDOUT_LOGGING"/>
+</settings>
+```
+
+设置好以后test执行：
+
+![image-20200325161702998](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325161702998.png)
+
+下面学习如何读这个日志文件。
+
+![image-20200325162532544](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325162532544.png)
+
+##### 2.log4j
+
+> [log4j百度词条](https://baike.baidu.com/item/log4j/480673?fr=aladdin)
+>
+> og4j是Apache的一个开源项目，通过使用Log4j，我们可以控制日志信息输送的目的地是控制台、文件、GUI组件，甚至是套接口服务器、NT的事件记录器、UNIX Syslog守护进程等；我们也可以控制每一条日志的输出格式；通过定义每一条日志信息的级别，我们能够更加细致地控制日志的生成过程。最令人感兴趣的就是，这些可以通过一个配置文件来灵活地进行配置，而不需要修改应用的代码。
+
+使用步骤：
+①配置
+
+```XML
+<settings>
+    <!--log日志设置 名字 属性-->
+    <!--<setting name="logImpl" value="STDOUT_LOGGING"/>-->
+    <setting name="logImpl" value="LOG4J"/>
+</settings>
+```
+
+②导包
+在log4j的Maven仓库中找到。
+![image-20200325164005100](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325164005100.png)
+
+导入-->mybatis04对应的pom就行
+
+```xml
+<dependencies>
+    <!-- https://mvnrepository.com/artifact/log4j/log4j -->
+    <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>1.2.17</version>
+    </dependency>
+</dependencies>
+```
+
+③再加一个配置文件再resources下——log4j.properties
+
+```properties
+#将等级为DEBUG的日志信息输出到console和file这两个目的地，console和file的定义在下面的代码
+log4j.rootLogger=DEBUG,console,file
+
+#控制台输出的相关设置
+log4j.appender.console = org.apache.log4j.ConsoleAppender
+log4j.appender.console.Target = System.out
+log4j.appender.console.Threshold=DEBUG
+log4j.appender.console.layout = org.apache.log4j.PatternLayout
+log4j.appender.console.layout.ConversionPattern=[%c]-%m%n
+
+#文件输出的相关设置
+log4j.appender.file = org.apache.log4j.RollingFileAppender
+log4j.appender.file.File=./log/kuang.log
+log4j.appender.file.MaxFileSize=10mb
+log4j.appender.file.Threshold=DEBUG
+log4j.appender.file.layout=org.apache.log4j.PatternLayout
+log4j.appender.file.layout.ConversionPattern=[%p][%d{yy-MM-dd}][%c]%m%n
+#上面这句话还可以改时间格式，或者在%d前面加几个字
+
+#日志输出级别
+log4j.logger.org.mybatis=DEBUG
+log4j.logger.java.sql=DEBUG
+log4j.logger.java.sql.Statement=DEBUG
+log4j.logger.java.sql.ResultSet=DEBUG
+log4j.logger.java.sql.PreparedStatement=DEBUG
+```
+
+④使用和之前默认的有啥不一样呢
+
+![image-20200325174718363](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325174718363.png)
+
+其实差不多。
+
+在test中简单使用：
+
+![image-20200325190334223](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325190334223.png)
+
+1.在要使用Log4j的类中，导入import org.apache.log4j,导入的包是apache公司的，不要弄错。
+
+2.日志对象，参数为当前类的class
+
+```java
+static Logger logger = Logger.getLogger(UserMapperTest.class);
+```
+
+要为整个类服务，所以在类中直接static。下面是测试代码
+
+```java
+public class UserMapperTest {
+    static Logger logger = Logger.getLogger(UserMapperTest.class);
+    @Test
+    public void testLog4j(){
+        logger.info("info:进入了testLog4j");
+        logger.debug("debug:进入了testLog4j");
+        logger.error("error:进入了testLog4j");
+    }
+}
+```
+
+![image-20200325191318524](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325191318524.png)
+
+结果如上图所示，并且还会输出一个log文件夹，输出路径是由log4j.properties的配置决定的。
+
+```properties
+log4j.appender.file.File=./log/haonan.log
+```
+
+![image-20200325191500362](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325191500362.png)
+日志文件中也会打印这些信息。
+
+日志级别：info debug erro  还有其他的就先不学了。
+
+### 七、分页
+
+>  为什么要分页？
+>
+> - 减少数据的处理量
+
+以前：是使用limit分页
+
+```sql
+语法：SELECT * from user limit startIndex,pageSize;
+```
+
+![image-20200325194919721](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325194919721.png)
+
+表示，在这个表中从第0个开始查，每页有俩个元素。
+
+```sql
+SELECT * from user limit 3;   这个就是从0开始输出三个
+```
+
+#### 7.1使用Mybatis实现分页，核心SQL
+
+1.接口中定义一个方法
+
+```java
+//实现分页查询
+List<User> getUserByLimit(Map<String,Integer> map);
+```
+
+2.Mapper.xml
+
+```xml
+<!--实现分页查询-->
+<select id="getUserByLimit" parameterType="map" resultType="User">
+    select * from mybatis.user limit #{startIndex},#{pageSize}
+</select>
+```
+
+3.测试
+
+```java
+@Test
+public void getUserBylimit(){
+    SqlSession sqlSession=MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    HashMap<String, Integer> map = new HashMap<String, Integer>();
+    map.put("startIndex",0);
+    map.put("pageSize",3);
+    List<User> userByLimit = mapper.getUserByLimit(map);
+    for (User user : userByLimit) {
+        System.out.println(user.toString());
+    }
+    sqlSession.close();
+}
+```
+
+![image-20200325201429456](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325201429456.png)
+
+密码为空了，为啥因为User的密码叫password，数据里的叫pwd，配置结果映射另外起的名字叫UserMap，注意一下就好了。
+
+```xml
+<select id="getUserByLimit" parameterType="map" resultMap="UserMap">
+```
+
+### 八、使用注解开发
+
+#### 8.1面向接口编程
+
+java中注重面向对象编程，而上面的各种行为是放在了UserMapper的接口中，实际上面向接口在编程，以后做架构师的话，也是把这些事物和行为抽象出来写好接口然后让别人去实现。
+
+从更深层次上去理解，应是定义（规范、约束）与实现的分离。
+接口的本身反映了系统设计人员对系统的抽象理解。
+接口应有两类：
+第一类是对一个个体的抽象，它可对应为一个抽象体(abstract class);
+第二类是对一个个体某一方面的抽象，即形成一个抽象面(interface);
+一个个体是可以有多个抽象面的。抽象体与抽象面是有区别的。
+
+#### 8.2用注解代替Mapper
+
+![image-20200325204935343](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325204935343.png)
+
+新建项目mybatis05,删除UserMapper.xml使用注解代替xml配置。
+
+```java
+public interface UserMapper {
+    /*使用注解实现sql*/
+    @Select("select * from user")
+    List<User> getUser();
+}
+```
+
+然后在核心配置文件中绑定这个接口，这时候就不用mapper resource了，用mapper class
+
+```xml
+<!--绑定接口-->
+<mappers>
+    <mapper class="com.haonan.dao.UserMapper"/>
+</mappers>
+```
+
+```java
+@Test
+    public void getUser(){
+        SqlSession sqlSession =MybatisUtils.getSqlSession();
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        List<User> userList = mapper.getUser();
+        for (User user : userList) {
+            System.out.println(user.toString());
+        }
+    }
+}
+```
+
+实现测试类，输出：
+
+```verilog
+<==    Columns: id, name, pwd
+<==        Row: 1, 赵浩男, 123456
+<==        Row: 2, 麻新钰, 123456
+<==        Row: 3, 爱谁谁, 123456
+<==        Row: 4, 新名字, pssssqwe
+<==        Row: 5, 爱新觉罗, 2323
+<==        Row: 6, 第六人, asd
+<==        Row: 46, 江大盗, mima
+<==      Total: 7
+User{id=1, name='赵浩男', password='null'}
+User{id=2, name='麻新钰', password='null'}
+User{id=3, name='爱谁谁', password='null'}
+User{id=4, name='新名字', password='null'}
+User{id=5, name='爱新觉罗', password='null'}
+User{id=6, name='第六人', password='null'}
+User{id=46, name='江大盗', password='null'}
+```
+
+我们发现用注解好像没有办法处理复杂的问题——User中的password和数据库中的pwd不对应问题。或许我们可以这样：
+
+```java
+@Select("select id,name,pwd as password from user")
+```
+
+可以正确输出，但是，当数据多的时候明显这样很不合适。
+
+所以并不推荐用注解——当然当查询语句比较简单的时候可以用。
+
+#### 8.3新鲜：用debug看执行过程
+
+![image-20200325212440683](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325212440683.png)
+
+![image-20200325213232006](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325213232006.png)
+
+注解开发核心本质就是反射机制。
+
+底层就是动态代理。动态代理是什么呢？
+![image-20200325214453680](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325214453680.png)
+
+以后慢慢学把。
+
+### 九、增删改的事务自动提交
+
+> 之前我们都是写好了sql，然后sqlSession调用mapper.xml胜澈mapper，实现增删改查，最好还要sqlSession.commit提交上去
+
+实际上，我们可以在创建sqlSession的时候设置自动提交。创建时使用的openSession方法是可以有参数的。
+
+![image-20200325221417015](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325221417015.png)
+
+我们去查看一下openSession的源码看一下，它是如何重载的，又有啥功能。
+
+```java
+public SqlSession openSession() {
+    return this.sqlSessionFactory.openSession();
+}
+/* 无参数时是默认不自动提交 */
+public SqlSession openSession(boolean autoCommit) {
+    return this.sqlSessionFactory.openSession(autoCommit);
+}
+/* 传入一个Boolean=true时  开启自动提交事务 （只要前面的sql语句没错就自动提交了）*/
+public SqlSession openSession(Connection connection) {
+    return this.sqlSessionFactory.openSession(connection);
+}
+
+public SqlSession openSession(TransactionIsolationLevel level) {
+    return this.sqlSessionFactory.openSession(level);
+}
+
+public SqlSession openSession(ExecutorType execType) {
+    return this.sqlSessionFactory.openSession(execType);
+}
+
+public SqlSession openSession(ExecutorType execType, boolean autoCommit) {
+    return this.sqlSessionFactory.openSession(execType, autoCommit);
+}
+
+public SqlSession openSession(ExecutorType execType, TransactionIsolationLevel level) {
+    return this.sqlSessionFactory.openSession(execType, level);
+}
+
+public SqlSession openSession(ExecutorType execType, Connection connection) {
+    return this.sqlSessionFactory.openSession(execType, connection);
+}
+```
+
+编写测试代码（注解）
+
+#### 1.查
+
+```java
+//当方法存在多个参数时，所有参数前面必须加上Param
+@Select("select * from user where id = #{id}")
+User getUserById(@Param("id") int id);
+```
+
+```java
+@Test
+public void getUserById(){
+    SqlSession sqlSession =MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    User user = mapper.getUserById(3);
+    System.out.println(user.toString());
+    sqlSession.close();
+}
+```
+
+#### 2.增
+
+```java
+//这里前三个要和数据库对齐   后三个要和User属性对齐
+@Insert("insert into user (id , name , pwd) values (#{id},#{name},#{password})")
+void addUser(User user);
+```
+
+```java
+@Test
+public void addUser(){
+    SqlSession sqlSession =MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    User user = new User(77, "陈乔恩", "shahsha");
+    mapper.addUser(user);
+    System.out.println(user.toString());
+    sqlSession.close();
+}
+```
+
+![image-20200325224707851](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325224707851.png)
+成功增加。这里注意 并没有提交事务，说明自动提交了。
+
+#### 3.改删
+
+```java
+//还是一样的道理  引用的名字要和User的属性对齐
+@Update("update user set name =#{name},pwd=#{password} where id=#{id}")
+void updateById(User user);
+
+@Delete("delete from user where id=#{id}")
+void deleteById(int id);
+```
+
+```java
+@Test
+public void update(){
+    SqlSession sqlSession =MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    User user = new User(1, "陈乔恩", "shaha");
+    mapper.updateById(user);
+    System.out.println(user.toString());
+    user = new User(2, "盘尼西林", "hhhaha");
+    mapper.updateById(user);
+    System.out.println(user.toString());
+    sqlSession.close();
+}
+
+@Test
+public void delete(){
+    SqlSession sqlSession =MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    mapper.deleteById(77);
+    System.out.println("成功删除！");
+    sqlSession.close();
+}
+```
+
+![image-20200325225928133](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325225928133.png)
+
+成功！可以自动提交，顺便写了注解的增删改
+
+#### 4.#{} 和 ${}的区别
+
+[连接](https://www.cnblogs.com/liaowenhui/p/12217959.html)
+
+![image-20200325230757972](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325230757972.png)
