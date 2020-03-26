@@ -1832,6 +1832,8 @@ select * from mybatis.user where id = #{id}
 
 ![image-20200325153850018](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325153850018.png)
 
+（result比较通用，可以代替id）
+
 如果世界总是这么简单就好了。其实还有很多操作！！！！！
 
 resultMap是很强大的，当数据库内容庞杂时就要用resultMap来实现了，这样才能写起来自己心里有数舒服便捷。
@@ -2280,3 +2282,555 @@ public void delete(){
 [连接](https://www.cnblogs.com/liaowenhui/p/12217959.html)
 
 ![image-20200325230757972](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200325230757972.png)
+
+### 十、Lombok
+
+> Project Lombok is a **java library** that automatically plugs into your editor and build tools, spicing up your java.
+> Never write another getter or equals method again, with one annotation your class has a fully featured builder, Automate your logging variables, and much more.
+> 不用再写getset了，直接用注解
+
+1.在IDEA中安装Lombok插件
+
+![image-20200326075501962](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326075501962.png)
+
+2.Maven安装依赖包——mybatis05的pom.xml中
+
+![image-20200326075810403](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326075810403.png)
+
+3.在实体类上写注解
+
+```java
+@Getter and @Setter  get/set方法
+@FieldNameConstants  常量
+@ToString
+@EqualsAndHashCode
+@AllArgsConstructor, @RequiredArgsConstructor and @NoArgsConstructor
+@Log, @Log4j, @Log4j2, @Slf4j, @XSlf4j, @CommonsLog, @JBossLog, @Flogger, @CustomLog
+@Data
+@Builder
+@SuperBuilder
+@Singular
+@Delegate
+@Value
+@Accessors
+@Wither
+@With
+@SneakyThrows
+@val
+@var
+experimental @var
+@UtilityClass
+```
+
+User实体类中：
+
+![image-20200326080928355](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326080928355.png)
+
+加了注解@Data后，如图所示。自动生成各种方法。
+
+![image-20200326081207037](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326081207037.png)
+
+```java
+@Data 无参构造，get、set,toString,hashcode,equals
+在加上下面这几个一般就够用了
+@AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode
+@ToString
+```
+
+知乎：这是一种低级趣味的插件，不建议使用。JAVA发展到今天，各种插件层出不穷，如何甄别各种插件的优劣？能从架构上优化你的设计的，能提高应用程序性能的 ，
+实现高度封装可扩展的...， 像lombok这种，像这种插件，已经不仅仅是插件了，改变了你如何编写源码，事实上，少去了代码你写上去又如何？ 
+如果JAVA家族到处充斥这样的东西，那只不过是一坨披着金属颜色的屎，迟早会被其它的语言取代。
+
+### 十一、多对一的处理
+
+> 回到之前我们讲结果映射时的遗留问题，多对一的问题
+> 多个学生对应一个老师，对于学生而言多对一，多个学生关联一个老师，对于老师是一对多，一个老师有很多学生。
+
+![image-20200326093236082](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326093236082.png)
+
+```sql
+CREATE TABLE `teacher`(
+   `id` INT(10) NOT NULL,
+   `name` VARCHAR(30) DEFAULT NULL,
+   PRIMARY KEY (`id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+SELECT * FROM `teacher`
+CREATE TABLE `student`(
+   `id` INT(10) NOT NULL,
+   `name` VARCHAR(30) DEFAULT NULL,
+   `tid` INT(10) DEFAULT NULL,
+   PRIMARY KEY (`id`),
+   KEY `fktid` (`tid`),
+   CONSTRAINT `FKTID` FOREIGN KEY (`tid`) REFERENCES `teacher` (`id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8
+
+`user`
+SELECT * FROM `student`;
+```
+
+#### 测试环境搭建
+
+1.新建一个项目mybatis06
+
+2.新建实体类Teacher、Student
+
+3.建立Mapper接口（俩个）
+
+4.建立Mapper.xml(如果是用注解的话就不用写XML了)
+
+5.核心配置中绑定注册的Mapper，给实体类起好别名方便写Mapper中的返回值
+
+6.测试查询是否能够成功
+
+#### 查询所有的学生信息以及对应的老师的信息
+
+对应的sql语句是：
+
+```sql
+select s.id,s.name,t.name from student s,teacher t where s.tid=t.id;
+```
+
+期望结果应该是这样的：
+
+1	小明	赵老师
+2	小刚	赵老师
+3	陈乔恩	赵老师
+4	周杰伦	赵老师
+5	亚索	赵老师
+
+可是怎样把这个sql语句放在xml中实现呢？因为返回的东西要对应这三个值，但是Student中定义的字段是：
+
+```java
+@Data
+public class Student {
+    private int id;
+    private String name;
+    //学生需要关联一个老师,在数据库中是tid，这里不光名字不一样，类型还不一样
+    private Teacher teacher;
+}
+```
+
+```xml
+<select id="getStudent" resultType="Student">
+	select * from student;
+</select>
+```
+
+所以当我们执行上面的一个简单的sql时，得到的都是这样的结果：
+
+![image-20200326102515048](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326102515048.png)
+
+因为是Student的teacher字段和数据库中的tid不对应导致的，更别说那个复杂的sql语句了。
+
+让人想到哟用ResultMap="Map"是不是可以实现啊。
+
+```xml
+<resultMap id="UserMap" type="User">
+    <result column="pwd" property="password"/>
+</resultMap>
+
+<!-- 这是之前User学习中对不同名字段的处理 -->
+<select id="getUserById" parameterType="_int" resultMap="UserMap">
+    select * from mybatis.user where id=#{id}
+</select>
+```
+
+但是这个名字不同，但是他们都是String类型啊，这里tid是int型的，而Studeng中的teacher是Teacher啊。咋整呢？看下文！
+
+**1.按照查询嵌套处理**
+
+```xml
+<!--
+思路：
+    1.查询所有的学生信息。
+    2.根据查询出来的学生的tid，寻找对应的老师！
+-->
+<resultMap id="StudentTeacher" type="Student">
+    <result property="id" column="id"/>
+    <result property="id" column="id"/>
+    <!--复杂的属性我们需要单独处理
+        对象：association 给对象设置一个类型，通过这个column中的东西要干嘛
+        集合：collection
+    -->
+    <association property="teacher" column="tid"
+                 javaType="Teacher" select="getTeacher"/>
+</resultMap>
+<select id="getStudent" resultMap="StudentTeacher">
+    select * from student;
+</select>
+<select id="getTeacher" resultType="Teacher">
+    select * from teacher where id =#{tid};
+</select>
+```
+
+值得注意的是，getTeacher并没有在接口中实现，这是一个嵌套关系，直接嵌套在StudentMapper中的getStudent下了。——有点像子查询。
+
+注意：我打印的时候出现teacher=内存地址的东西，是因为没用在Teacher类中写toString的方法(添加注解——lombok)。最好结果如下：
+
+![image-20200326112117211](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326112117211.png)
+
+
+
+**2.按照结果嵌套处理**
+
+```xml
+<!--按照结果集嵌套查询-->
+    <resultMap id="StudentTeacher2" type="Student">
+        <result property="id" column="sid"/>
+        <result property="name" column="sname"/>
+        <association property="teacher" javaType="Teacher">
+            <result property="id" column="tid"/>
+            <result property="name" column="tname"/>
+        </association>
+    </resultMap>
+    <select id="getStudent2" resultMap="StudentTeacher2">
+        select s.id sid,s.name sname,t.id tid,t.name tname
+        from student s,teacher t
+        where s.tid=t.id;
+</select>
+```
+
+核心就在于 <association property="teacher" javaType="Teacher">
+
+当选出的四个值，要起别名，然后传给resultMap，让resultMap处理这四个值，与Student中的三个属性id,name,teacher(id,name)一一对应，其中teacher要展开来获取tanme和tid。就是这么简单！哈哈哈哈结果如下
+
+![image-20200326114601321](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326114601321.png)
+
+### 十二、一对多的处理
+
+#### 测试环境搭建
+
+1.新建一个项目mybatis07
+
+2.新建实体类Teacher、Student
+
+```java
+@Data
+public class Student {
+    private int id;
+    private String name;
+    private int tid;
+}
+```
+
+```java
+@Data
+public class Teacher {
+    private int id;
+    private String name;
+    //一个老师对应多个学生
+    private List<Student> students;
+}
+```
+
+3.建立Mapper接口（俩个）
+
+4.建立Mapper.xml(如果是用注解的话就不用写XML了)
+
+5.核心配置中绑定注册的Mapper，给实体类起好别名方便写Mapper中的返回值
+
+6.测试查询是否能够成功
+
+```sql
+select t.id tid,t.name tname,s.id sid,s.name sname
+from student s,teacher t
+where s.tid=t.id
+```
+
+想要查询老师及其对应的学生时，sql应该和上面这样写。
+
+#### 用结果嵌套查询。
+
+```java
+//获得指定老师下的所有学生及老师的信息——mapper中
+Teacher getTeacher(@Param("tid") int tid);
+```
+```xml
+<!--按结果嵌套查询-->
+<resultMap id="TeacherStudent" type="Teacher">
+    <result property="id" column="tid"/>
+    <result property="name" column="tname"/>
+    <!--这里就不是对象了而是List<Student>是个集合用collection-->
+    <!--javaType=“” 指定属性的类型
+                  集合中的泛型信息，用ofType获取
+                -->
+    <collection property="students" ofType="Student">
+        <result property="id" column="sid"/>
+        <result property="name" column="sname"/>
+    </collection>
+</resultMap>
+
+<select id="getTeacher" resultMap="TeacherStudent">
+    select t.id tid,t.name tname,s.id sid,s.name sname
+    from student s,teacher t
+    where s.tid=t.id and t.id=#{tid}
+</select>
+```
+
+还是返回了四个值分别放在四个属性中，只不过后俩个值是放在泛型时Student的集合List中，这个还是蛮简单的。
+
+#### 用子查询嵌套的方式
+
+```xml
+<!--用子查询-->
+<resultMap id="TeacherStudent2" type="Teacher">
+        <result property="id" column="id"/>
+        <result property="name" column="name"/>
+        <collection property="students" column="id"
+                    ofType="Student" select="getStudent"/>
+</resultMap>
+
+<select id="getTeacher2" resultMap="TeacherStudent2">
+        select * from teacher where id=#{tid}  这个tid对应传入参数的注解@param中的名字
+</select>
+<select id="getStudent" resultType="Student">
+        select *from student where tid=#{id}   这个tid随便
+</select>
+```
+
+先查老师，然后用老师的id去tid=#{id}  这个id  随便起名字 无所谓。
+
+![image-20200326142519851](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326142519851.png)
+
+#### 小结
+
+1.关联 - association [多对一]
+
+2.集合 - collection [一对多]
+
+3.javaType & ofType
+	javaType 用来指定实体类中属性的类型
+	ofType 用来指定映射到List或者集合中的pojo类型，泛型中的约束类型！
+
+### 十三、动态SQL(先不学了)
+
+### 十四、Mybatis缓存
+
+14.1缓存简介
+
+> 查询 ： 连接数据库，耗资源
+> 一次查询的结果，给他暂存在一个可以直接取到的地方！-->内存 ：缓存
+> 我们再次查询相同数据的时候，直接去缓存节省开销
+
+#### 14.2Mybatis缓存
+
+默认定义了两级缓存。
+
+- 默认情况下，只有一级缓存开启。（sqlSession级别的缓存，即本地缓存）
+- 二级缓存需要手动开启和配置，他是基于namespqce级别的缓存。
+- 为了提高扩展性，Mybatis定义了缓存接口Cache。我们可以通过实现Cache接口来定义二级缓存
+
+#### 14.3一级缓存
+
+测试步骤：
+
+1.开启日志！标准的就行。看从来取得数据。
+
+2.编写测试类
+
+```java
+SqlSession sqlSession = MybatisUtils.getSqlSession();
+UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+User user = mapper.getUserById(2);
+System.out.println(user.toString());
+System.out.println("=====================================");
+User user2 = mapper.getUserById(2);
+System.out.println(user2.toString());
+System.out.println(user==user2);
+sqlSession.close();
+```
+
+![image-20200326153229184](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326153229184.png)
+
+结果表明在一个Session中查询俩次相同的记录时是在一个sqlSessiong的会话中，在一级缓存中。
+
+原因（一级缓存的机制）：MyBatis执行SQL语句之后，这条语句的执行结果被缓存，以后再执行这条语句的时候，会直接从缓存中拿结果，而不是再次执行SQL。但是一旦执行新增或更新或删除操作，缓存就会被清除。
+
+##### 一级缓存失效的情况
+
+1.增删改操作可能会改变原来的数据，所以必定会刷新缓存
+
+![image-20200326154157967](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326154157967.png)
+
+2.查询不同的东西。
+
+3.get不同的Mapper建立Session
+这个肯定会失效，都不是在一个SqlSession中，不再一级缓存中。
+
+4.手动清理缓存——clearCache
+![image-20200326154553216](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326154553216.png)
+
+注：一级缓存默认开启，作用域在一个sqlSession中有用。
+
+#### 14.4二级缓存
+
+一级缓存的功能太弱鸡了，所以引入了二级缓存，怎么用呢，直接在mapper.xml中加一行<cache/>
+这个标签还可以定义一些很高级的功能。
+
+- 基于namespace级别的缓存，一个名称空间，对应一个二级缓存。
+
+  工作机制：①一个会话查询一条数据，这个数据就会被放在当前会话的一级缓存中②会话关闭了一级缓存中的内容被保存到二级缓存中③新的会话查询信息，就可以从二级缓存中获取内容④不同的mapper（基于namespace）查出的数据会放在自己对应的缓存中。（也就是说二级缓存有多个）
+
+**步骤：**
+
+1.开启全局缓存——在核心配置中的setting中
+![image-20200326155730369](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326155730369.png)
+
+```xml
+<!--开启二级缓存（全局缓存）-->
+<setting name="cacheEnabled" value="true"/>
+```
+
+2.在要使用二级缓存的Mapper.xml中开启二级缓存并定制功能
+
+```xml
+<!--在当前Mapper下使用二级缓存-->
+<cache eviction="FIFO"        
+        flushInterval="60000" 
+       size="512"
+       readOnly="true"
+/>
+```
+
+先进先出，6秒一刷，512kb大小，只读
+
+3.测试
+
+![image-20200326163043304](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326163043304.png)
+
+虽然是不同sqlSession但是是在一个Mapper下的，共用一个二级缓存。
+
+##### 小结
+
+- 只要开启了二级缓存，在同一个Mapper下就有效
+- 所有的数据都会先放在一级缓存中
+- 只有当会话提交，胡总和关闭的时候，才会提交到二级缓存中14.5
+
+14.5缓存原理展示
+
+![image-20200326164623896](%E5%9B%BE%E7%89%87%E4%BF%9D%E5%AD%98%E9%98%B2%E4%B8%A2%E5%A4%B1/image-20200326164623896.png)
+
+#### 14.5自定义缓存-ehcache
+
+> Ehcache是一种广泛使用的开源Java分布式缓存。主要面向通用缓存,Java EE和轻量级容器。它具有内存和磁盘存储，缓存加载器,缓存扩展,缓存异常处理程序,一个gzip缓存servlet过滤器,支持REST和SOAP api等特点。
+
+1.要在程序中使用ehcache，先导入包。
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.mybatis.caches/mybatis-ehcache -->
+<dependency>
+    <groupId>org.mybatis.caches</groupId>
+    <artifactId>mybatis-ehcache</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
+
+2.在Mapper.xml中
+
+```xml
+<!--自定义缓存-->
+<cache type="org.mybatis.caches.ehcache.EhcacheCache"/>
+```
+
+
+
+3.再加xml文件
+
+ehcache.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd"
+         updateCheck="false">
+    <!--
+       diskStore：为缓存路径，ehcache分为内存和磁盘两级，此属性定义磁盘的缓存位置。参数解释如下：
+       user.home – 用户主目录
+       user.dir  – 用户当前工作目录
+       java.io.tmpdir – 默认临时文件路径
+     -->
+    <diskStore path="java.io.tmpdir/Tmp_EhCache"/>
+    
+    <defaultCache
+            eternal="false"
+            maxElementsInMemory="10000"
+            overflowToDisk="false"
+            diskPersistent="false"
+            timeToIdleSeconds="1800"
+            timeToLiveSeconds="259200"
+            memoryStoreEvictionPolicy="LRU"/>
+
+    <cache
+            name="cloud_user"
+            eternal="false"
+            maxElementsInMemory="5000"
+            overflowToDisk="false"
+            diskPersistent="false"
+            timeToIdleSeconds="1800"
+            timeToLiveSeconds="1800"
+            memoryStoreEvictionPolicy="LRU"/>
+    <!--
+           defaultCache：默认缓存策略，当ehcache找不到定义的缓存时，则使用这个缓存策略。只能定义一个。
+         -->
+    <!--
+      name:缓存名称。
+      maxElementsInMemory:缓存最大数目
+      maxElementsOnDisk：硬盘最大缓存个数。
+      eternal:对象是否永久有效，一但设置了，timeout将不起作用。
+      overflowToDisk:是否保存到磁盘，当系统宕机时
+      timeToIdleSeconds:设置对象在失效前的允许闲置时间（单位：秒）。仅当eternal=false对象不是永久有效时使用，可选属性，默认值是0，也就是可闲置时间无穷大。
+      timeToLiveSeconds:设置对象在失效前允许存活时间（单位：秒）。最大时间介于创建时间和失效时间之间。仅当eternal=false对象不是永久有效时使用，默认是0.，也就是对象存活时间无穷大。
+      diskPersistent：是否缓存虚拟机重启期数据 Whether the disk store persists between restarts of the Virtual Machine. The default value is false.
+      diskSpoolBufferSizeMB：这个参数设置DiskStore（磁盘缓存）的缓存区大小。默认是30MB。每个Cache都应该有自己的一个缓冲区。
+      diskExpiryThreadIntervalSeconds：磁盘失效线程运行时间间隔，默认是120秒。
+      memoryStoreEvictionPolicy：当达到maxElementsInMemory限制时，Ehcache将会根据指定的策略去清理内存。默认策略是LRU（最近最少使用）。你可以设置为FIFO（先进先出）或是LFU（较少使用）。
+      clearOnFlush：内存数量最大时是否清除。
+      memoryStoreEvictionPolicy:可选策略有：LRU（最近最少使用，默认策略）、FIFO（先进先出）、LFU（最少访问次数）。
+      FIFO，first in first out，这个是大家最熟的，先进先出。
+      LFU， Less Frequently Used，就是上面例子中使用的策略，直白一点就是讲一直以来最少被使用的。如上面所讲，缓存的元素有一个hit属性，hit值最小的将会被清出缓存。
+      LRU，Least Recently Used，最近最少使用的，缓存的元素有一个时间戳，当缓存容量满了，而又需要腾出地方来缓存新的元素的时候，那么现有缓存元素中时间戳离当前时间最远的元素将被清出缓存。
+     -->
+</ehcache>
+```
+
+4.用一个类实现一个Cache接口
+
+创建工具类MyCache
+
+```java
+package com.haonan.utils;
+
+import org.apache.ibatis.cache.Cache;
+
+public class MyCache implements Cache {
+
+    public String getId() {
+        return null;
+    }
+
+    public void putObject(Object o, Object o1) {
+
+    }
+
+    public Object getObject(Object o) {
+        return null;
+    }
+
+    public Object removeObject(Object o) {
+        return null;
+    }
+
+    public void clear() {
+
+    }
+
+    public int getSize() {
+        return 0;
+    }
+}
+```
+
+可别学了这个，去学redis和Spring了。
